@@ -8,7 +8,7 @@ pipeline {
     stage('Checkout Code') {
       steps {
         echo 'Pulling from Github'
-        git branch: 'main', credentialsId: 'mygithubcred', url: 'https://github.com/chntraining/wipjen.git'
+        git branch: 'main', credentialsId: 'mygithubcred', url: 'https://github.com/PriyanshuGuptaXV/inidaproj.git'
       }
     }
     stage('Test Code') {
@@ -37,8 +37,35 @@ pipeline {
         bat 'docker build -t myjavaproj:1.0 .'
       }
     }
-    
-    stage('Run Docker Container') {
+    stage('Push Docker Image to DockerHub') {
+      steps {
+        echo 'Pushing  Docker Image'
+        withCredentials([string(credentialsId: 'dockerhubcred', variable: 'DOCKER_PASS')]) {
+  	      bat '''
+          echo %DOCKER_PASS% | docker login -u priyanshu56204 --password-stdin
+          docker tag myjavaproj:1.0 priyanshu56204/myjavaproj:1.0
+          docker push priyanshu56204/myjavaproj:1.0
+          '''}
+      }
+    }
+    stage('Deploy Project to K8s') {
+      steps {
+        echo 'Deploy Java project to Kubernetes'
+		bat '''
+		  minikube delete
+		  minikube start
+		  minikube image load priyanshu56204/myjavaproj:1.0
+          kubectl apply -f deployment.yaml
+		  kubectl apply -f services.yaml
+		  kubectl get pods
+		  kubectl describe pods
+		  kubectl get services
+		  minikube addons enable dashboard
+		  minikube dashboard
+		'''
+      }
+	}
+  /* stage('Run Docker Container') {
       steps {
         echo 'Running Java Application'
         bat '''
@@ -47,7 +74,7 @@ pipeline {
         
         '''               
       }
-    }
+    }*/
   }
   post {
     success {
